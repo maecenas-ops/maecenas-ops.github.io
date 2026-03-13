@@ -4,7 +4,7 @@
   "manifest_version": 1,
   "action": {
     "title": "NPC Profiles",
-    "icon": "https://maecenas-ops.github.io/icon.svg",
+    "icon": "https://maecenas-ops.github.io/icon.png",
     "popover": "https://maecenas-ops.github.io/panel.html",
     "height": 600,
     "width": 380
