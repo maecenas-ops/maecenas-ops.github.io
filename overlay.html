@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NPC Reveal</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@1.11.0/dist/bundle.js"></script>
+<style>
+  :root {
+    --ink: #0d0d1a;
+    --ink-mid: #1a1a2e;
+    --parchment: #e8dfc8;
+    --parchment-dim: #b5a98a;
+    --gold: #c9a84c;
+    --gold-dim: #8a6f2e;
+    --teal: #4aafa0;
+    --teal-dim: #2d7068;
+    --red-dim: #8a3030;
+    --red: #c45050;
+    --border: rgba(201,168,76,0.3);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: transparent;
+    font-family: 'Crimson Pro', Georgia, serif;
+    overflow: hidden;
+  }
+
+  /* Full-screen backdrop */
+  #backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,20,0.82);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 1000;
+  }
+  #backdrop.visible { opacity: 1; }
+
+  /* Card */
+  .reveal-card {
+    background: var(--ink-mid);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow:
+      0 0 60px rgba(201,168,76,0.12),
+      0 30px 80px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(201,168,76,0.15);
+    max-width: 420px;
+    width: 90vw;
+    max-height: 88vh;
+    overflow-y: auto;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    scrollbar-width: thin;
+    scrollbar-color: var(--gold-dim) var(--ink);
+  }
+  #backdrop.visible .reveal-card {
+    transform: scale(1) translateY(0);
+  }
+
+  /* Decorative top bar */
+  .card-accent {
+    height: 3px;
+    background: linear-gradient(to right, transparent, var(--gold), transparent);
+    border-radius: 10px 10px 0 0;
+  }
+
+  .card-inner { padding: 24px; }
+
+  /* Image */
+  .reveal-image {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    display: block;
+  }
+  .reveal-image-placeholder {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .reveal-image-placeholder svg { opacity: 0.2; }
+
+  /* Name / role */
+  .reveal-eyebrow {
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 6px;
+  }
+  .reveal-name {
+    font-family: 'Cinzel', serif;
+    font-size: 26px;
+    color: var(--gold);
+    line-height: 1.15;
+    margin-bottom: 4px;
+  }
+  .reveal-role {
+    font-style: italic;
+    color: var(--parchment-dim);
+    font-size: 15px;
+    margin-bottom: 18px;
+  }
+
+  .reveal-divider {
+    height: 1px;
+    background: linear-gradient(to right, var(--gold-dim), transparent);
+    margin-bottom: 16px;
+  }
+
+  .reveal-description {
+    color: var(--parchment);
+    font-size: 16px;
+    line-height: 1.7;
+    margin-bottom: 18px;
+  }
+
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+  .tag {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid;
+  }
+  .tag-threat { color: var(--red); border-color: var(--red-dim); }
+  .tag-consequence { color: var(--teal); border-color: var(--teal-dim); }
+  .tag-generic { color: var(--gold); border-color: var(--gold-dim); }
+
+  /* Close button */
+  .close-row {
+    text-align: center;
+    padding-top: 4px;
+    border-top: 1px solid rgba(201,168,76,0.1);
+  }
+  .btn-close {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    color: var(--parchment-dim);
+    padding: 7px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-close:hover { border-color: var(--gold); color: var(--parchment); }
+
+  /* Decorative corner ornaments */
+  .corner {
+    position: absolute;
+    width: 16px; height: 16px;
+    border-color: var(--gold-dim);
+    border-style: solid;
+    opacity: 0.5;
+  }
+  .corner-tl { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+  .corner-tr { top: 8px; right: 8px; border-width: 1px 1px 0 0; }
+  .corner-bl { bottom: 8px; left: 8px; border-width: 0 0 1px 1px; }
+  .corner-br { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
+  .card-wrap { position: relative; }
+</style>
+</head>
+<body>
+
+<div id="backdrop">
+  <div class="card-wrap">
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+    <div class="reveal-card">
+      <div class="card-accent"></div>
+      <div class="card-inner">
+        <div id="r-img-wrap"></div>
+        <div class="reveal-eyebrow">Character Profile</div>
+        <div class="reveal-name" id="r-name"></div>
+        <div class="reveal-role" id="r-role"></div>
+        <div class="reveal-divider"></div>
+        <div class="reveal-description" id="r-desc"></div>
+        <div class="tags-wrap" id="r-tags"></div>
+        <div class="close-row">
+          <button class="btn-close" id="btn-close">Dismiss</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const METADATA_KEY = 'npc-profiles-data';
+const REVEAL_KEY = 'npc-profiles-revealed';
+
+let lastTimestamp = 0;
+
+OBR.onReady(async () => {
+  // Check for an already-revealed NPC on load
+  const meta = await OBR.room.getMetadata();
+  handleMeta(meta);
+
+  // Listen for new reveals
+  OBR.room.onMetadataChange(meta => handleMeta(meta));
+
+  // Close button
+  document.getElementById('btn-close').addEventListener('click', hideCard);
+  document.getElementById('backdrop').addEventListener('click', e => {
+    if (e.target === document.getElementById('backdrop')) hideCard();
+  });
+});
+
+function handleMeta(meta) {
+  const revealRaw = meta[REVEAL_KEY];
+  if (!revealRaw) return;
+
+  const reveal = JSON.parse(revealRaw);
+  // Don't re-show the same reveal
+  if (reveal.timestamp === lastTimestamp) return;
+  lastTimestamp = reveal.timestamp;
+
+  const npcsRaw = meta[METADATA_KEY];
+  if (!npcsRaw) return;
+  const npcs = JSON.parse(npcsRaw);
+  const npc = npcs.find(n => n.id === reveal.id);
+  if (!npc) return;
+
+  populateCard(npc);
+  showCard();
+}
+
+function populateCard(npc) {
+  // Image
+  const imgWrap = document.getElementById('r-img-wrap');
+  if (npc.image) {
+    imgWrap.innerHTML = `<img class="reveal-image" src="${escHtml(npc.image)}" alt="${escHtml(npc.name)}"/>`;
+  } else {
+    imgWrap.innerHTML = `
+      <div class="reveal-image-placeholder">
+        <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="30" cy="22" r="12" stroke="#c9a84c" stroke-width="1.5"/>
+          <path d="M8 54C8 36 52 36 52 54" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>`;
+  }
+
+  document.getElementById('r-name').textContent = npc.name;
+  document.getElementById('r-role').textContent = npc.role || '';
+  document.getElementById('r-desc').textContent = npc.description || '';
+
+  // Tags (no GM notes shown to players)
+  const tagsEl = document.getElementById('r-tags');
+  if (npc.tags && npc.tags.length) {
+    tagsEl.innerHTML = npc.tags.map(t =>
+      `<span class="tag tag-${escHtml(t.type)}">${escHtml(t.text)}</span>`
+    ).join('');
+    tagsEl.style.display = 'flex';
+  } else {
+    tagsEl.style.display = 'none';
+  }
+}
+
+function showCard() {
+  document.getElementById('backdrop').classList.add('visible');
+}
+
+function hideCard() {
+  document.getElementById('backdrop').classList.remove('visible');
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

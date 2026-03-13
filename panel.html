@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NPC Profiles</title>
+<script src="sdk/obr-sdk.iife.js"></script>
+<style>
+:root {
+  --ink: #0d0d1a;
+  --ink-mid: #1a1a2e;
+  --parchment: #e8dfc8;
+  --parchment-dim: #b5a98a;
+  --gold: #c9a84c;
+  --gold-dim: #8a6f2e;
+  --teal: #4aafa0;
+  --teal-dim: #2d7068;
+  --red: #c45050;
+  --red-dim: #8a3030;
+  --border: rgba(201,168,76,0.25);
+  --border-hi: rgba(201,168,76,0.5);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  background: var(--ink);
+  color: var(--parchment);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: 15px;
+}
+
+.hdr {
+  padding: 12px 14px 10px;
+  background: var(--ink-mid);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.hdr-title {
+  font-family: Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.role-badge {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold-dim);
+  letter-spacing: 0.1em;
+}
+.role-badge.gm { color: var(--teal); border-color: var(--teal-dim); }
+.hdr-row { display: flex; gap: 6px; }
+select {
+  flex: 1;
+  background: var(--ink);
+  border: 1px solid var(--border-hi);
+  color: var(--parchment);
+  font-family: Georgia, serif;
+  font-size: 14px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+select:focus { border-color: var(--gold); }
+
+.tabs {
+  display: flex;
+  background: var(--ink-mid);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tab {
+  flex: 1;
+  padding: 7px 4px;
+  text-align: center;
+  font-family: Georgia, serif;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) var(--ink);
+}
+
+.btn {
+  font-family: Georgia, serif;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid;
+  cursor: pointer;
+  background: transparent;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-gold { color: var(--gold); border-color: var(--gold-dim); }
+.btn-gold:hover { background: rgba(201,168,76,0.1); }
+.btn-teal { color: var(--teal); border-color: var(--teal-dim); }
+.btn-teal:hover { background: rgba(74,175,160,0.1); }
+.btn-red  { color: var(--red);  border-color: var(--red-dim); }
+.btn-red:hover  { background: rgba(196,80,80,0.1); }
+
+.empty {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--parchment-dim);
+  font-style: italic;
+}
+.empty h3 {
+  font-family: Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--gold-dim);
+  margin-bottom: 8px;
+  font-style: normal;
+}
+
+.profile { display: none; flex-direction: column; gap: 12px; }
+.profile.show { display: flex; }
+
+.img-wrap {
+  width: 100%; aspect-ratio: 4/3;
+  border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--border-hi);
+  background: var(--ink-mid);
+  display: flex; align-items: center; justify-content: center;
+}
+.img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.img-placeholder { color: var(--parchment-dim); font-size: 11px; letter-spacing: 0.1em; }
+
+.p-name { font-family: Georgia, serif; font-size: 20px; color: var(--gold); }
+.p-role { font-style: italic; color: var(--parchment-dim); font-size: 14px; margin-top: 2px; }
+.divider { height: 1px; background: linear-gradient(to right, var(--gold-dim), transparent); }
+.p-desc { line-height: 1.65; }
+
+.tags-label {
+  font-family: Georgia, serif; font-size: 9px;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--parchment-dim); margin-bottom: 5px;
+}
+.tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag {
+  font-family: Georgia, serif; font-size: 10px;
+  letter-spacing: 0.05em; padding: 3px 8px;
+  border-radius: 3px; border: 1px solid;
+  display: flex; align-items: center; gap: 4px;
+}
+.tag-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.tag-threat      { color: var(--red);  border-color: var(--red-dim);  background: rgba(196,80,80,0.08); }
+.tag-threat .tag-dot { background: var(--red); }
+.tag-consequence { color: var(--teal); border-color: var(--teal-dim); background: rgba(74,175,160,0.08); }
+.tag-consequence .tag-dot { background: var(--teal); }
+.tag-generic     { color: var(--gold); border-color: var(--gold-dim); background: rgba(201,168,76,0.08); }
+.tag-generic .tag-dot { background: var(--gold); }
+
+.tag-type-label {
+  font-size: 8px;
+  opacity: 0.7;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gm-box {
+  background: rgba(201,168,76,0.05);
+  border: 1px solid var(--border-hi);
+  border-radius: 4px; padding: 10px;
+}
+.gm-box-text { font-style: italic; color: var(--parchment-dim); font-size: 14px; line-height: 1.6; }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 2px; }
+
+.form { display: flex; flex-direction: column; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 3px; }
+label {
+  font-family: Georgia, serif; font-size: 9px;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--parchment-dim);
+}
+input[type=text], textarea {
+  background: var(--ink-mid);
+  border: 1px solid var(--border);
+  color: var(--parchment);
+  font-family: Georgia, serif;
+  font-size: 15px; padding: 7px 9px;
+  border-radius: 4px; outline: none; width: 100%;
+  transition: border-color 0.15s;
+}
+input[type=text]:focus, textarea:focus { border-color: var(--gold); }
+textarea { min-height: 72px; resize: vertical; }
+
+.tag-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; }
+.tag-del {
+  display: flex; align-items: center; gap: 4px;
+  font-family: Georgia, serif; font-size: 10px;
+  padding: 3px 5px 3px 8px;
+  border-radius: 3px; border: 1px solid var(--gold-dim); color: var(--gold);
+  background: rgba(201,168,76,0.08);
+}
+.tag-del button {
+  background: none; border: none; color: var(--gold-dim);
+  cursor: pointer; font-size: 13px; line-height: 1; padding: 0;
+}
+.tag-del button:hover { color: var(--red); }
+.tag-row { display: flex; gap: 5px; }
+.tag-row input { flex: 1; }
+select.tag-type {
+  background: var(--ink-mid); border: 1px solid var(--border);
+  color: var(--parchment-dim); font-family: Georgia, serif;
+  font-size: 12px; padding: 7px 5px; border-radius: 4px; outline: none; cursor: pointer;
+  flex-shrink: 0;
+}
+.form-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+#overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(8,8,18,0.9);
+  align-items: center; justify-content: center;
+}
+#overlay.show { display: flex; }
+.ov-card {
+  background: var(--ink-mid);
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+  box-shadow: 0 0 50px rgba(201,168,76,0.12), 0 20px 60px rgba(0,0,0,0.8);
+  width: 92%; max-height: 90vh;
+  overflow-y: auto;
+  animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  scrollbar-width: thin; scrollbar-color: var(--gold-dim) var(--ink);
+}
+@keyframes popIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.ov-bar { height: 3px; background: linear-gradient(to right, transparent, var(--gold), transparent); border-radius: 10px 10px 0 0; }
+.ov-inner { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.ov-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); display: block; }
+.ov-img-ph { width: 100%; aspect-ratio: 16/9; border-radius: 6px; border: 1px solid var(--border); background: var(--ink); display: flex; align-items: center; justify-content: center; }
+.ov-eye { font-family: Georgia, serif; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold-dim); }
+.ov-name { font-family: Georgia, serif; font-size: 22px; color: var(--gold); line-height: 1.2; }
+.ov-role { font-style: italic; color: var(--parchment-dim); font-size: 14px; }
+.ov-div { height: 1px; background: linear-gradient(to right, var(--gold-dim), transparent); }
+.ov-desc { line-height: 1.65; font-size: 15px; }
+.ov-close { text-align: center; border-top: 1px solid rgba(201,168,76,0.1); padding-top: 10px; }
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-title">
+    ⚔ NPC Profiles
+    <span class="role-badge" id="role-badge">Player</span>
+  </div>
+  <div class="hdr-row">
+    <select id="npc-select">
+      <option value="">— Select a character —</option>
+    </select>
+    <button class="btn btn-gold" id="btn-new" style="display:none">+ New</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="view">Profile</div>
+  <div class="tab" data-tab="edit" id="tab-edit-btn" style="display:none">Edit</div>
+  <div class="tab" data-tab="gm-toggle" id="tab-gm-toggle" style="font-size:8px;opacity:0.45">GM Mode</div>
+</div>
+
+<div class="scroll">
+
+  <div id="view-tab">
+    <div class="empty" id="empty-msg">
+      <h3>No Character Selected</h3>
+      <p>Choose a character from the dropdown above.</p>
+    </div>
+    <div class="profile" id="profile-card">
+      <div class="img-wrap" id="p-img-wrap">
+        <span class="img-placeholder">No image</span>
+      </div>
+      <div>
+        <div class="p-name" id="p-name"></div>
+        <div class="p-role" id="p-role"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="p-desc" id="p-desc"></div>
+      <div id="p-tags-wrap" style="display:none">
+        <div class="tags-label">Tags</div>
+        <div class="tags" id="p-tags"></div>
+      </div>
+      <div class="gm-box" id="p-gm-box" style="display:none">
+        <div class="tags-label">🔒 GM Notes</div>
+        <div class="gm-box-text" id="p-gm-notes"></div>
+      </div>
+      <div class="actions" id="gm-actions" style="display:none">
+        <button class="btn btn-teal" id="btn-reveal">⬆ Reveal to Players</button>
+        <button class="btn btn-gold" id="btn-edit">Edit</button>
+        <button class="btn btn-red"  id="btn-delete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="edit-tab" style="display:none">
+    <div class="form">
+      <div class="field">
+        <label>Name *</label>
+        <input type="text" id="f-name" placeholder="e.g. Mira Dusk"/>
+      </div>
+      <div class="field">
+        <label>Title / Role</label>
+        <input type="text" id="f-role" placeholder="e.g. Harbour Master of the Bracket"/>
+      </div>
+      <div class="field">
+        <label>Image URL</label>
+        <input type="text" id="f-image" placeholder="https://..."/>
+      </div>
+      <div class="field">
+        <label>Description (visible to all)</label>
+        <textarea id="f-desc" placeholder="How this character appears and behaves..."></textarea>
+      </div>
+      <div class="field">
+        <label>Tags</label>
+        <div class="tag-list" id="f-tag-list"></div>
+        <div class="tag-row">
+          <input type="text" id="f-tag-input" placeholder="Add a tag..."/>
+          <select class="tag-type" id="f-tag-type">
+            <option value="generic">General</option>
+            <option value="threat">Threat</option>
+            <option value="consequence">Consequence</option>
+          </select>
+          <button class="btn btn-gold" id="btn-add-tag">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>GM Notes (hidden from players)</label>
+        <textarea id="f-gm-notes" placeholder="Secrets only you should know..."></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-teal" id="btn-save">Save</button>
+        <button class="btn btn-gold" id="btn-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="overlay">
+  <div class="ov-card">
+    <div class="ov-bar"></div>
+    <div class="ov-inner">
+      <div id="ov-img-wrap"></div>
+      <div class="ov-eye">Character Profile</div>
+      <div class="ov-name" id="ov-name"></div>
+      <div class="ov-role" id="ov-role"></div>
+      <div class="ov-div"></div>
+      <div class="ov-desc" id="ov-desc"></div>
+      <div class="tags" id="ov-tags" style="display:none"></div>
+      <div class="ov-close">
+        <button class="btn btn-gold" id="btn-close-overlay">Dismiss</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var npcs = [];
+var editTags = [];
+var currentId = null;
+var isGM = false;
+var lastRevealTs = 0;
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function makeTag(t) {
+  var label = t.type === 'threat' ? 'Threat' : t.type === 'consequence' ? 'Consequence' : 'Tag';
+  return '<span class="tag tag-' + esc(t.type) + '">' +
+    '<span class="tag-dot"></span>' +
+    '<span class="tag-type-label">' + label + ':</span> ' +
+    esc(t.text) + '</span>';
+}
+
+function enableGM() {
+  isGM = true;
+  document.getElementById('role-badge').textContent = 'GM';
+  document.getElementById('role-badge').classList.add('gm');
+  document.getElementById('btn-new').style.display = 'block';
+  document.getElementById('tab-edit-btn').style.display = 'block';
+  document.getElementById('tab-gm-toggle').style.display = 'none';
+  document.getElementById('gm-actions').style.display = 'flex';
+  if (currentId) renderProfile(currentId);
+}
+
+function showTab(name) {
+  document.getElementById('view-tab').style.display = name === 'view' ? 'block' : 'none';
+  document.getElementById('edit-tab').style.display = name === 'edit' ? 'block' : 'none';
+  document.querySelectorAll('.tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.tab === name);
+  });
+}
+
+document.querySelectorAll('.tab').forEach(function(t) {
+  t.addEventListener('click', function() {
+    if (t.dataset.tab === 'gm-toggle') { enableGM(); return; }
+    showTab(t.dataset.tab);
+  });
+});
+
+function rebuildSelect() {
+  var sel = document.getElementById('npc-select');
+  var prev = sel.value;
+  sel.innerHTML = '<option value="">— Select a character —</option>';
+  npcs.forEach(function(n) {
+    var o = document.createElement('option');
+    o.value = n.id;
+    o.textContent = n.name + (n.role ? ' — ' + n.role : '');
+    sel.appendChild(o);
+  });
+  if (prev && npcs.find(function(n){ return n.id === prev; })) sel.value = prev;
+}
+
+document.getElementById('npc-select').addEventListener('change', function(e) {
+  if (e.target.value) renderProfile(e.target.value);
+  else clearProfile();
+});
+
+function renderProfile(id) {
+  var npc = npcs.find(function(n){ return n.id === id; });
+  if (!npc) { clearProfile(); return; }
+  currentId = id;
+  document.getElementById('empty-msg').style.display = 'none';
+  document.getElementById('profile-card').classList.add('show');
+  var imgWrap = document.getElementById('p-img-wrap');
+  if (npc.image) {
+    imgWrap.innerHTML = '<img src="' + esc(npc.image) + '" alt="' + esc(npc.name) + '" style="width:100%;height:100%;object-fit:cover;display:block;"/>';
+  } else {
+    imgWrap.innerHTML = '<span class="img-placeholder">No image</span>';
+  }
+  document.getElementById('p-name').textContent = npc.name || '';
+  document.getElementById('p-role').textContent = npc.role || '';
+  document.getElementById('p-desc').textContent = npc.description || '';
+  var tagsWrap = document.getElementById('p-tags-wrap');
+  if (npc.tags && npc.tags.length) {
+    document.getElementById('p-tags').innerHTML = npc.tags.map(function(t){ return makeTag(t); }).join('');
+    tagsWrap.style.display = 'block';
+  } else {
+    tagsWrap.style.display = 'none';
+  }
+  var gmBox = document.getElementById('p-gm-box');
+  if (isGM && npc.gmNotes) {
+    document.getElementById('p-gm-notes').textContent = npc.gmNotes;
+    gmBox.style.display = 'block';
+  } else {
+    gmBox.style.display = 'none';
+  }
+  document.getElementById('gm-actions').style.display = isGM ? 'flex' : 'none';
+}
+
+function clearProfile() {
+  currentId = null;
+  document.getElementById('empty-msg').style.display = 'block';
+  document.getElementById('profile-card').classList.remove('show');
+}
+
+document.getElementById('btn-new').addEventListener('click', function() {
+  currentId = null;
+  clearForm();
+  showTab('edit');
+});
+
+document.getElementById('btn-edit').addEventListener('click', function() {
+  var npc = npcs.find(function(n){ return n.id === currentId; });
+  if (!npc) return;
+  populateForm(npc);
+  showTab('edit');
+});
+
+function clearForm() {
+  ['f-name','f-role','f-image','f-desc','f-gm-notes'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
+  editTags = [];
+  renderEditTags();
+}
+
+function populateForm(npc) {
+  document.getElementById('f-name').value     = npc.name        || '';
+  document.getElementById('f-role').value     = npc.role        || '';
+  document.getElementById('f-image').value    = npc.image       || '';
+  document.getElementById('f-desc').value     = npc.description || '';
+  document.getElementById('f-gm-notes').value = npc.gmNotes     || '';
+  editTags = npc.tags ? npc.tags.map(function(t){ return {text:t.text, type:t.type}; }) : [];
+  renderEditTags();
+}
+
+function renderEditTags() {
+  document.getElementById('f-tag-list').innerHTML = editTags.map(function(t, i){
+    return '<span class="tag-del">' + esc(t.text) +
+           '<button onclick="removeTag(' + i + ')">×</button></span>';
+  }).join('');
+}
+
+window.removeTag = function(i) {
+  editTags.splice(i, 1);
+  renderEditTags();
+};
+
+document.getElementById('btn-add-tag').addEventListener('click', function() {
+  var val = document.getElementById('f-tag-input').value.trim();
+  if (!val) return;
+  editTags.push({ text: val, type: document.getElementById('f-tag-type').value });
+  document.getElementById('f-tag-input').value = '';
+  renderEditTags();
+});
+
+document.getElementById('f-tag-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-tag').click(); }
+});
+
+var obrInstance = null;
+
+function persist() {
+  if (!obrInstance) {
+    return Promise.reject(new Error('Not connected to OBR yet — please wait a moment and try again.'));
+  }
+  var payload = {};
+  payload['npc-profiles/v1'] = JSON.stringify(npcs);
+  return obrInstance.room.setMetadata(payload);
+}
+
+document.getElementById('btn-save').addEventListener('click', function() {
+  var name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('Name is required'); return; }
+  var btn = document.getElementById('btn-save');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+  var npc = {
+    id:          currentId || String(Date.now()),
+    name:        name,
+    role:        document.getElementById('f-role').value.trim(),
+    image:       document.getElementById('f-image').value.trim(),
+    description: document.getElementById('f-desc').value.trim(),
+    gmNotes:     document.getElementById('f-gm-notes').value.trim(),
+    tags:        editTags.slice(),
+  };
+  var idx = npcs.findIndex(function(n){ return n.id === npc.id; });
+  if (idx >= 0) npcs[idx] = npc; else npcs.push(npc);
+  persist().then(function() {
+    currentId = npc.id;
+    rebuildSelect();
+    document.getElementById('npc-select').value = npc.id;
+    renderProfile(npc.id);
+    showTab('view');
+    btn.textContent = 'Save';
+    btn.disabled = false;
+  }).catch(function(e) {
+    console.error('NPC Profiles: save failed', e);
+    alert('Save failed: ' + (e && e.message ? e.message : String(e)));
+    npcs = npcs.filter(function(n){ return n.id !== npc.id; });
+    btn.textContent = 'Save';
+    btn.disabled = false;
+  });
+});
+
+document.getElementById('btn-cancel').addEventListener('click', function() { showTab('view'); });
+
+document.getElementById('btn-delete').addEventListener('click', function() {
+  var npc = npcs.find(function(n){ return n.id === currentId; });
+  if (!npc || !confirm('Delete "' + npc.name + '"?')) return;
+  npcs = npcs.filter(function(n){ return n.id !== currentId; });
+  persist().then(function() {
+    currentId = null;
+    rebuildSelect();
+    clearProfile();
+  }).catch(function(e) {
+    alert('Delete failed: ' + (e && e.message ? e.message : String(e)));
+  });
+});
+
+document.getElementById('btn-reveal').addEventListener('click', function() {
+  var npc = npcs.find(function(n){ return n.id === currentId; });
+  if (!npc) return;
+  if (!obrInstance) {
+    // LOCAL mode — just show the overlay in this window
+    showOverlay(npc);
+    document.getElementById('btn-reveal').textContent = '✓ Revealed!';
+    setTimeout(function(){ document.getElementById('btn-reveal').textContent = '⬆ Reveal to Players'; }, 2500);
+    return;
+  }
+  var ts = Date.now();
+  var meta = {};
+  meta['npc-profiles/v1']     = JSON.stringify(npcs);
+  meta['npc-profiles/reveal'] = JSON.stringify({ id: npc.id, ts: ts });
+  obrInstance.room.setMetadata(meta).then(function() {
+    lastRevealTs = ts;
+    document.getElementById('btn-reveal').textContent = '✓ Revealed!';
+    setTimeout(function(){ document.getElementById('btn-reveal').textContent = '⬆ Reveal to Players'; }, 2500);
+  }).catch(function(e) {
+    alert('Reveal failed: ' + (e && e.message ? e.message : String(e)));
+  });
+});
+
+function showOverlay(npc) {
+  var wrap = document.getElementById('ov-img-wrap');
+  if (npc.image) {
+    wrap.innerHTML = '<img class="ov-img" src="' + esc(npc.image) + '" alt="' + esc(npc.name) + '"/>';
+  } else {
+    wrap.innerHTML = '<div class="ov-img-ph"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="17" r="9" stroke="#c9a84c" stroke-width="1.5"/><path d="M6 43C6 29 42 29 42 43" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/></svg></div>';
+  }
+  document.getElementById('ov-name').textContent = npc.name || '';
+  document.getElementById('ov-role').textContent = npc.role || '';
+  document.getElementById('ov-desc').textContent = npc.description || '';
+  var tagsEl = document.getElementById('ov-tags');
+  if (npc.tags && npc.tags.length) {
+    tagsEl.innerHTML = npc.tags.map(function(t){ return makeTag(t); }).join('');
+    tagsEl.style.display = 'flex';
+  } else {
+    tagsEl.style.display = 'none';
+  }
+  document.getElementById('overlay').classList.add('show');
+}
+
+document.getElementById('btn-close-overlay').addEventListener('click', function() {
+  document.getElementById('overlay').classList.remove('show');
+});
+document.getElementById('overlay').addEventListener('click', function(e) {
+  if (e.target === document.getElementById('overlay'))
+    document.getElementById('overlay').classList.remove('show');
+});
+
+function loadFromMeta(meta) {
+  var raw = meta['npc-profiles/v1'];
+  if (raw) {
+    try { npcs = JSON.parse(raw); } catch(e) { npcs = []; }
+    rebuildSelect();
+    if (currentId) renderProfile(currentId);
+  }
+  var revRaw = meta['npc-profiles/reveal'];
+  if (revRaw) {
+    try {
+      var r = JSON.parse(revRaw);
+      if (r.ts && r.ts !== lastRevealTs) {
+        lastRevealTs = r.ts;
+        var npc = npcs.find(function(n){ return n.id === r.id; });
+        if (npc) showOverlay(npc);
+      }
+    } catch(e) {}
+  }
+}
+
+// --- localStorage fallback for when OBR isn't available (popped out, direct load, etc.) ---
+var LOCAL_KEY = 'npc-profiles/v1';
+
+function persistLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(npcs)); } catch(e) {}
+}
+
+function loadLocal() {
+  try {
+    var raw = localStorage.getItem(LOCAL_KEY);
+    if (raw) { npcs = JSON.parse(raw); rebuildSelect(); }
+  } catch(e) {}
+}
+
+window.addEventListener('load', function() {
+  if (typeof window.OBR === 'undefined' || !window.OBR.isAvailable) {
+    // Running outside OBR (popped out / direct URL) — use localStorage
+    document.getElementById('role-badge').textContent = 'LOCAL';
+    enableGM();
+    loadLocal();
+    // Override persist to use localStorage
+    persist = function() {
+      persistLocal();
+      return Promise.resolve();
+    };
+    return;
+  }
+  window.OBR.onReady(function() {
+    obrInstance = window.OBR;
+    obrInstance.player.getRole().then(function(role) {
+      if (typeof role === 'string' && role.toUpperCase() === 'GM') enableGM();
+    }).catch(function(e) {
+      console.warn('NPC Profiles: role check failed', e);
+    });
+    obrInstance.room.getMetadata().then(function(meta) {
+      loadFromMeta(meta);
+    }).catch(function(e) {
+      console.warn('NPC Profiles: metadata load failed', e);
+    });
+    obrInstance.room.onMetadataChange(function(meta) { loadFromMeta(meta); });
+  });
+});
+</script>
+</body>
+</html>

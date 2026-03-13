@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background -->
+  <rect width="100" height="100" rx="14" fill="#0d0d1a"/>
+
+  <!-- Portrait frame -->
+  <rect x="14" y="10" width="72" height="72" rx="5" fill="#1a1a2e" stroke="#c9a84c" stroke-width="2"/>
+
+  <!-- Corner ornaments -->
+  <path d="M14 22 L14 10 L26 10" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round"/>
+  <path d="M74 10 L86 10 L86 22" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round"/>
+  <path d="M14 70 L14 82 L26 82" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round"/>
+  <path d="M74 82 L86 82 L86 70" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Person silhouette - head -->
+  <circle cx="50" cy="34" r="11" fill="#c9a84c"/>
+
+  <!-- Person silhouette - shoulders/body -->
+  <path d="M24 82 C24 60 76 60 76 82" fill="#c9a84c"/>
+
+  <!-- Name line at bottom -->
+  <rect x="22" y="88" width="30" height="3" rx="1.5" fill="#c9a84c" opacity="0.7"/>
+  <rect x="56" y="88" width="18" height="3" rx="1.5" fill="#c9a84c" opacity="0.35"/>
+</svg>

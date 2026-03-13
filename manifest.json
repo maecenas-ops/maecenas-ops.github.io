@@ -1,0 +1,12 @@
+{
+  "name": "NPC Profiles",
+  "version": "1.0.0",
+  "manifest_version": 1,
+  "action": {
+    "title": "NPC Profiles",
+    "icon": "https://maecenas-ops.github.io/icon.svg",
+    "popover": "https://maecenas-ops.github.io/panel.html",
+    "height": 600,
+    "width": 380
+  }
+}
