@@ -2,9 +2,10 @@
   "name": "LITM Character Sheets",
   "version": "1.0.0",
   "manifest_version": 1,
+  "icon": "https://maecenas-ops.github.io/charsheet/icon.png",
   "action": {
     "title": "Character Sheets",
-    "icon": "https://maecenas-ops.github.io/charsheet/icon.png",
+    "icon": "https://maecenas-ops.github.io/charsheet/icon.svg",
     "popover": "https://maecenas-ops.github.io/charsheet/",
     "height": 700,
     "width": 480
