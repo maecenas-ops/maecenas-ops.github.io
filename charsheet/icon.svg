@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="8" fill="#3d1f08"/>
+  <rect x="10" y="8" width="44" height="48" rx="3" fill="#f2e8d0" stroke="#8b5020" stroke-width="1.5"/>
+  <rect x="10" y="8" width="44" height="9" rx="3" fill="#6b3d18"/>
+  <rect x="10" y="14" width="44" height="3" fill="#6b3d18"/>
+  <line x1="16" y1="26" x2="48" y2="26" stroke="#c4a060" stroke-width="1"/>
+  <line x1="16" y1="32" x2="48" y2="32" stroke="#c4a060" stroke-width="1"/>
+  <line x1="16" y1="38" x2="48" y2="38" stroke="#c4a060" stroke-width="1"/>
+  <line x1="16" y1="44" x2="36" y2="44" stroke="#c4a060" stroke-width="1"/>
+  <text x="32" y="16" font-family="Georgia,serif" font-size="6" fill="#f2e8d0" text-anchor="middle" letter-spacing="1">LITM</text>
+</svg>
