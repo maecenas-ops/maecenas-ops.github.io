@@ -49,7 +49,7 @@ html,body{height:100%;background:var(--ink);font-family:'Crimson Pro',Georgia,se
 .f-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);font-family:'Crimson Pro',serif;font-size:.95rem;color:var(--parch);padding:1px 0 2px;outline:none;transition:border-color .2s}
 .f-input:focus{border-bottom-color:var(--gold)}
 .f-input::placeholder{color:var(--parch-faint);opacity:.6;font-style:italic}
-.name-input{font-family:'Cinzel',serif;font-size:1.1rem;font-style:normal;letter-spacing:.06em;border-bottom-width:1px;border-bottom-color:var(--border-hi);margin-bottom:6px;color:var(--gold-bright)}
+.name-input{font-family:'Cinzel',serif;font-size:1.1rem;font-style:normal;letter-spacing:.06em;border-bottom-color:var(--border-hi);margin-bottom:6px;color:var(--gold-bright)}
 
 .title-tag-wrap{display:flex;align-items:center;gap:6px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 .title-tag-input{flex:1;background:transparent;border:none;font-family:'Crimson Pro',serif;font-size:1.1rem;font-style:italic;color:var(--parch);outline:none;padding:0}
@@ -89,6 +89,11 @@ html,body{height:100%;background:var(--ink);font-family:'Crimson Pro',Georgia,se
 .fellow-row{display:flex;gap:5px;border-bottom:1px solid var(--line);padding:3px 0}
 .fellow-row:last-child{border-bottom:none}
 
+.portrait-wrap{width:64px;height:64px;flex-shrink:0;border:1px solid var(--border-hi);border-radius:2px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3)}
+.portrait-wrap:hover{border-color:var(--gold)}
+.portrait-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.portrait-ph{color:var(--parch-faint);font-family:'Cinzel',serif;font-size:.45rem;letter-spacing:.1em;text-align:center;line-height:1.8;text-transform:uppercase;pointer-events:none}
+
 .toast{position:fixed;bottom:10px;right:10px;background:rgba(201,168,76,.15);border:1px solid var(--gold);color:var(--gold);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.12em;padding:5px 14px;border-radius:2px;box-shadow:0 3px 10px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:999;text-transform:uppercase}
 .toast.show{opacity:1}
 
@@ -116,7 +121,7 @@ html,body{height:100%;background:var(--ink);font-family:'Crimson Pro',Georgia,se
     <span class="topbar-title">LITM Sheets</span>
     <select class="char-select" id="charSelect" onchange="switchChar(this.value)"></select>
     <button class="icon-btn" onclick="openModal()" title="New character">&#xFF0B;</button>
-    <button class="icon-btn danger" onclick="deleteChar()" title="Delete character">&#x2715;</button>
+    <button class="icon-btn danger" onclick="deleteChar()" title="Delete character" style="width:auto;padding:0 8px;font-size:.5rem;letter-spacing:.1em;font-family:'Cinzel',serif;">Delete</button>
   </div>
   <div class="tabbar" id="tabbar"></div>
   <div class="scroll-area" id="scrollArea"><div class="loading">Initialising&#x2026;</div></div>
@@ -158,14 +163,6 @@ await loadOBR();
 // ═══════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════
-const THEME_TYPES = [
-  '\u2014 type \u2014',
-  'Circumstance','Devotion','Duty','Influence','Knowledge',
-  'Mastery','Monstrosity','Companion','Magic','Possessions',
-  'Past','People','Personality','Prodigious Ability','Relic',
-  'Skill or Trade','Trait','Uncanny Being','Destiny','Dominion',
-  'Other\u2026'
-];
 const PLAYER_TABS = ['Hero','Theme 1','Theme 2','Theme 3','Theme 4','Backpack','Fellowship'];
 const GM_TABS     = ['Hero','Theme 1','Theme 2','Theme 3','Theme 4','Backpack','Fellowship','\u2694 Party'];
 let TABS = PLAYER_TABS;
@@ -180,13 +177,13 @@ function emptyTag()   { return {val:'',scratched:false}; }
 function emptyTags(n) { return Array.from({length:n}, emptyTag); }
 
 function newTheme() {
-  return {type:'',titleTag:emptyTag(),powerTags:emptyTags(7),weakTags:emptyTags(2),quest:'',abandon:0,improve:0,milestone:0};
+  return {type:'',titleTag:emptyTag(),powerTags:emptyTags(7),weakTags:emptyTags(2),quest:'',abandon:0,improve:0,milestone:0,specialTags:emptyTags(2)};
 }
 function newFellowship() {
   return {title:'',powerTags:emptyTags(8),weakTag:emptyTag(),quest:'',abandon:0,improve:0,milestone:0,specialImprovements:''};
 }
 function newChar(name) {
-  return {name,playerName:'',promise:0,quintessences:'',
+  return {name,playerName:'',heroImage:'',bio:'',promise:0,quintessences:'',
     fellowRelations:[{companion:'',tag:''},{companion:'',tag:''},{companion:'',tag:''}],
     themes:[newTheme(),newTheme(),newTheme(),newTheme()],
     backpack:emptyTags(8),notes:'',fellowship:newFellowship()};
@@ -207,6 +204,8 @@ function migrateChar(c) {
     if (!t.weakTags  || !t.weakTags.length)  t.weakTags  = emptyTags(2);
     t.powerTags = t.powerTags.map(fixTag);
     t.weakTags  = t.weakTags.map(fixTag);
+    if (!t.specialTags || !t.specialTags.length) t.specialTags = emptyTags(2);
+    t.specialTags = t.specialTags.map(fixTag);
     return t;
   });
   if (!c.backpack || !c.backpack.length) c.backpack = emptyTags(8);
@@ -216,6 +215,8 @@ function migrateChar(c) {
   c.fellowship.weakTag   = fixTag(c.fellowship.weakTag);
   c.fellowship.powerTags = c.fellowship.powerTags.map(fixTag);
   if (!c.fellowRelations) c.fellowRelations = [{companion:'',tag:''},{companion:'',tag:''},{companion:'',tag:''}];
+  if (!c.heroImage) c.heroImage = '';
+  if (!c.bio) c.bio = '';
   return c;
 }
 
@@ -320,13 +321,14 @@ function readState() {
   const c = data[curChar] || newChar(curChar);
   if (curTab===0) {
     c.name=readVal('heroName'); c.playerName=readVal('playerName');
+    c.bio=readVal('heroBio');
     c.promise=readCircle('promiseTrack'); c.quintessences=readVal('quintessences');
     c.fellowRelations=[0,1,2].map(i=>({companion:readVal('fr_c_'+i),tag:readVal('fr_t_'+i)}));
   } else if (curTab>=1 && curTab<=4) {
     const t=c.themes[curTab-1];
     t.type=readVal('th_type'); t.quest=readVal('th_quest');
     t.abandon=readCircle('th_abandon'); t.improve=readCircle('th_improve'); t.milestone=readCircle('th_milestone');
-    t.titleTag=readTag('th_title'); t.powerTags=readTags('th_p',7); t.weakTags=readTags('th_w',2);
+    t.titleTag=readTag('th_title'); t.powerTags=readTags('th_p',7); t.weakTags=readTags('th_w',2); t.specialTags=readTags('th_s',2);
   } else if (curTab===5) {
     c.backpack=readTags('bp',8); c.notes=readVal('heroNotes');
   } else if (curTab===6) {
@@ -372,8 +374,20 @@ function card(titleHtml, right, body, footer) {
 // TAB RENDERERS
 // ═══════════════════════════════════════════════
 function heroHtml(c) {
-  let b = '<input class="f-input name-input" id="heroName" type="text" placeholder="Character Name" value="'+esc(c.name)+'" oninput="scheduleSave()">'
+  const imgInner = c.heroImage
+    ? '<img src="'+esc(c.heroImage)+'" alt="portrait">'
+    : '<span class="portrait-ph">ADD<br>IMAGE</span>';
+  let b = '<input type="file" id="heroImgInput" accept="image/*" style="display:none" onchange="handleHeroImage(event)">'
+    +'<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">'
+    +'<div class="portrait-wrap" onclick="document.getElementById(\'heroImgInput\').click()" title="Upload portrait">'+imgInner+'</div>'
+    +'<div style="flex:1;min-width:0">'
+    +'<input class="f-input name-input" id="heroName" type="text" placeholder="Character Name" value="'+esc(c.name)+'" oninput="scheduleSave()">'
     +'<input class="f-input" id="playerName" type="text" placeholder="Player Name" value="'+esc(c.playerName||'')+'" oninput="scheduleSave()">'
+    +'</div>'
+    +'</div>'
+    +'<div class="divider"></div>'
+    +'<span class="s-label">Bio &amp; Background</span>'
+    +'<textarea class="notes-area" id="heroBio" placeholder="Who are you, and how did you come to this&#x2026;" oninput="scheduleSave()" style="min-height:72px">'+esc(c.bio||'')+'</textarea>'
     +'<div class="divider"></div><span class="s-label">Fellowship Relationships</span>';
   for (let i=0;i<3;i++) {
     const fr=(c.fellowRelations&&c.fellowRelations[i])||{companion:'',tag:''};
@@ -390,9 +404,14 @@ function heroHtml(c) {
 
 function themeHtml(c, ti) {
   const t = c.themes[ti]||newTheme();
-  let opts='';
-  THEME_TYPES.forEach(o=>{ opts+='<option value="'+esc(o)+'"'+(t.type===o?' selected':'')+'>'+esc(o)+'</option>'; });
   const ttSc=!!(t.titleTag&&t.titleTag.scratched);
+  const ORIGIN_TYPES = ['Circumstance','Devotion','Past','People','Personality','Skill or Trade','Trait'];
+  const ADVENTURE_TYPES = ['Duty','Influence','Knowledge','Prodigious Ability','Relic','Uncanny Being'];
+  const GREATNESS_TYPES = ['Destiny','Dominion','Mastery','Monstrosity'];
+  let opts='<option value="">\u2014 type \u2014</option>'
+    +'<optgroup label="Origin">'+ORIGIN_TYPES.map(o=>'<option value="'+esc(o)+'"'+(t.type===o?' selected':'')+'>'+esc(o)+'</option>').join('')+'</optgroup>'
+    +'<optgroup label="Adventure">'+ADVENTURE_TYPES.map(o=>'<option value="'+esc(o)+'"'+(t.type===o?' selected':'')+'>'+esc(o)+'</option>').join('')+'</optgroup>'
+    +'<optgroup label="Greatness">'+GREATNESS_TYPES.map(o=>'<option value="'+esc(o)+'"'+(t.type===o?' selected':'')+'>'+esc(o)+'</option>').join('')+'</optgroup>';
   let b='<select class="type-select" id="th_type" onchange="scheduleSave()">'+opts+'</select>'
     +'<span class="s-label">Title Tag</span>'
     +'<div class="title-tag-wrap">'
@@ -412,7 +431,11 @@ function themeHtml(c, ti) {
     +circleRow('th_abandon','Abandon',t.abandon||0,3,'abandon')
     +circleRow('th_improve','Improve',t.improve||0,3,'improve')
     +circleRow('th_milestone','Milestone',t.milestone||0,3,'milestone')
-    +'</div>';
+    +'</div>'
+    +'<div class="divider"></div>'
+    +'<span class="s-label">Special Improvements</span><ul class="tag-list">';
+  t.specialTags.forEach((tg,i)=>{ b+=tagRow('th_s_'+i,'special improvement&#x2026;',tg,false); });
+  b+='</ul>';
   return card('Theme Card '+(ti+1),'&#x1F343; &#x2694; &#x1F451;',b);
 }
 
@@ -460,19 +483,19 @@ function partyHtml() {
         const title=(t.titleTag&&t.titleTag.val)||'&#x2014;';
         const type=(t.type&&t.type!=='\u2014 type \u2014')?' ('+esc(t.type)+')':'';
         b+='<div style="font-size:.85rem;border-bottom:1px solid var(--line);padding:3px 0">'
-          +'<span style="font-family:\'Crimson Pro\',serif;font-style:italic;color:var(--parch)">'+esc(title)+'</span>'
+          +'<span style="font-family:\'Crimson Pro\',serif;font-style:italic">'+esc(title)+'</span>'
           +'<span style="color:var(--parch-faint);font-size:.8rem">'+type+'</span>'
           +(t.quest?'<div style="font-style:italic;color:var(--parch-dim);font-size:.78rem">'+esc(t.quest)+'</div>':'')
           +'</div>';
       });
       const bpTags=c.backpack.filter(t=>t&&t.val);
       if (bpTags.length) {
-        b+='<div class="divider"></div><span class="s-label">Backpack</span><div style="font-size:.8rem;line-height:1.8;color:var(--parch-dim)">';
+        b+='<div class="divider"></div><span class="s-label">Backpack</span><div style="font-size:.8rem;line-height:1.8">';
         bpTags.forEach(t=>{ b+='<span style="'+(t.scratched?'text-decoration:line-through;opacity:.4':'')+'">'+(esc(t.val)||'')+'</span> &middot; '; });
         b+='</div>';
       }
       if (c.notes) b+='<div class="divider"></div><span class="s-label">Notes</span><div style="font-style:italic;font-size:.85rem;color:var(--parch-dim)">'+esc(c.notes)+'</div>';
-      const hdr='<span style="font-family:\'Cinzel\',serif;font-size:.75rem;color:var(--gold-bright)">'+esc(cname)+'</span>'
+      const hdr='<span style="font-family:\'Crimson Pro\',serif;font-style:italic">'+esc(cname)+'</span>'
         +' <span style="font-family:\'Cinzel\',serif;font-size:.55rem;letter-spacing:.08em;color:var(--parch-faint)">'+esc(playerName||'')+'</span>';
       html+=card(hdr,'',b);
     }
@@ -569,6 +592,23 @@ function createChar() {
   renderAll();
 }
 window.createChar=createChar;
+
+function handleHeroImage(event) {
+  const file = event.target.files[0];
+  if (!file || !curChar) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const data = load();
+    const c = data[curChar] || newChar(curChar);
+    c.heroImage = e.target.result;
+    data[curChar] = c;
+    saveChars(data);
+    const wrap = document.querySelector('.portrait-wrap');
+    if (wrap) wrap.innerHTML = '<img src="'+e.target.result+'" alt="portrait">';
+  };
+  reader.readAsDataURL(file);
+}
+window.handleHeroImage = handleHeroImage;
 
 function deleteChar() {
   if (!curChar) return;
