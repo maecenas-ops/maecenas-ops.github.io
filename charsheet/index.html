@@ -163,8 +163,8 @@ await loadOBR();
 // ═══════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════
-const PLAYER_TABS = ['Hero','Theme 1','Theme 2','Theme 3','Theme 4','Backpack','Fellowship'];
-const GM_TABS     = ['Hero','Theme 1','Theme 2','Theme 3','Theme 4','Backpack','Fellowship','\u2694 Party'];
+const PLAYER_TABS = ['Hero','Theme 1','Theme 2','Theme 3','Theme 4','Backpack'];
+const GM_TABS     = ['Hero','Theme 1','Theme 2','Theme 3','Theme 4','Backpack','\u2694 Party'];
 let TABS = PLAYER_TABS;
 
 const LS_KEY   = 'litm2';
@@ -179,14 +179,11 @@ function emptyTags(n) { return Array.from({length:n}, emptyTag); }
 function newTheme() {
   return {type:'',titleTag:emptyTag(),powerTags:emptyTags(7),weakTags:emptyTags(2),quest:'',abandon:0,improve:0,milestone:0,specialTags:emptyTags(2)};
 }
-function newFellowship() {
-  return {title:'',powerTags:emptyTags(8),weakTag:emptyTag(),quest:'',abandon:0,improve:0,milestone:0,specialImprovements:''};
-}
 function newChar(name) {
   return {name,playerName:'',heroImage:'',bio:'',promise:0,quintessences:'',
     fellowRelations:[{companion:'',tag:''},{companion:'',tag:''},{companion:'',tag:''}],
     themes:[newTheme(),newTheme(),newTheme(),newTheme()],
-    backpack:emptyTags(8),notes:'',fellowship:newFellowship()};
+    backpack:emptyTags(8),notes:''};
 }
 
 function fixTag(tg) {
@@ -210,10 +207,6 @@ function migrateChar(c) {
   });
   if (!c.backpack || !c.backpack.length) c.backpack = emptyTags(8);
   c.backpack = c.backpack.map(fixTag);
-  if (!c.fellowship) c.fellowship = newFellowship();
-  if (!c.fellowship.powerTags || !c.fellowship.powerTags.length) c.fellowship.powerTags = emptyTags(8);
-  c.fellowship.weakTag   = fixTag(c.fellowship.weakTag);
-  c.fellowship.powerTags = c.fellowship.powerTags.map(fixTag);
   if (!c.fellowRelations) c.fellowRelations = [{companion:'',tag:''},{companion:'',tag:''},{companion:'',tag:''}];
   if (!c.heroImage) c.heroImage = '';
   if (!c.bio) c.bio = '';
@@ -331,12 +324,6 @@ function readState() {
     t.titleTag=readTag('th_title'); t.powerTags=readTags('th_p',7); t.weakTags=readTags('th_w',2); t.specialTags=readTags('th_s',2);
   } else if (curTab===5) {
     c.backpack=readTags('bp',8); c.notes=readVal('heroNotes');
-  } else if (curTab===6) {
-    const f=c.fellowship;
-    f.title=readVal('fe_title'); f.quest=readVal('fe_quest');
-    f.abandon=readCircle('fe_abandon'); f.improve=readCircle('fe_improve'); f.milestone=readCircle('fe_milestone');
-    f.powerTags=readTags('fe_p',8); f.weakTag=readTag('fe_w_0');
-    f.specialImprovements=readVal('fe_special');
   }
   return c;
 }
@@ -447,26 +434,6 @@ function backpackHtml(c) {
   return card('Backpack','&#x1F392;',b,'Son of Oak');
 }
 
-function fellowshipHtml(c) {
-  const f=c.fellowship||newFellowship();
-  let b='<span class="s-label">Fellowship Title</span>'
-    +'<input class="f-input" id="fe_title" type="text" placeholder="Name this fellowship&#x2026;" value="'+esc(f.title||'')+'" oninput="scheduleSave()">'
-    +'<div class="divider"></div><span class="s-label">Power Tags (single-use)</span><ul class="tag-list">';
-  f.powerTags.forEach((tg,i)=>{ b+=tagRow('fe_p_'+i,'fellowship tag&#x2026;',tg,false); });
-  b+='</ul><div class="divider"></div><span class="s-label">Weakness</span><ul class="tag-list">'
-    +tagRow('fe_w_0','weakness tag&#x2026;',f.weakTag,true)
-    +'</ul><div class="divider"></div>'
-    +'<span class="s-label">Quest</span>'
-    +'<input class="quest-input" id="fe_quest" type="text" placeholder="The fellowship\'s shared purpose&#x2026;" value="'+esc(f.quest||'')+'" oninput="scheduleSave()">'
-    +'<div style="margin-top:8px">'
-    +circleRow('fe_abandon','Abandon',f.abandon||0,3,'abandon')
-    +circleRow('fe_improve','Improve',f.improve||0,3,'improve')
-    +circleRow('fe_milestone','Milestone',f.milestone||0,3,'milestone')
-    +'</div><div class="divider"></div><span class="s-label">Special Improvements</span>'
-    +'<textarea class="notes-area" id="fe_special" style="min-height:64px" placeholder="Special improvements unlocked&#x2026;" oninput="scheduleSave()">'+esc(f.specialImprovements||'')+'</textarea>';
-  return card('Fellowship Theme Card','&#x1F525;',b,'Son of Oak');
-}
-
 function partyHtml() {
   const entries = Object.values(partyData);
   if (!entries.length) return '<div class="empty">No players connected yet.<br>They will appear here once they join the room and open their sheet.</div>';
@@ -532,7 +499,6 @@ function renderTabContent() {
   else if (curTab===0)               html=heroHtml(c);
   else if (curTab>=1&&curTab<=4)     html=themeHtml(c,curTab-1);
   else if (curTab===5)               html=backpackHtml(c);
-  else if (curTab===6)               html=fellowshipHtml(c);
   area.innerHTML=html;
   area.scrollTop=0;
 }
