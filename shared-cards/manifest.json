@@ -1,0 +1,13 @@
+{
+  "name": "Fellowship & Ship",
+  "version": "1.0.0",
+  "manifest_version": 1,
+  "icon": "https://maecenas-ops.github.io/shared-cards/icon.png",
+  "action": {
+    "title": "Fellowship & Ship",
+    "icon": "https://maecenas-ops.github.io/shared-cards/icon.svg",
+    "popover": "https://maecenas-ops.github.io/shared-cards/panel.html",
+    "height": 600,
+    "width": 380
+  }
+}

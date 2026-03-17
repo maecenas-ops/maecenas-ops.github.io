@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fellowship & Ship</title>
+<script src="sdk/obr-sdk.iife.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:#0d0d1a; --ink-mid:#1a1a2e;
+  --parch:#e8dfc8; --parch-dim:#b5a98a; --parch-faint:#7a6f58;
+  --gold:#c9a84c; --gold-dim:#a07828; --gold-bright:#e2c06a;
+  --teal:#4aafa0; --teal-dim:#2d7a70;
+  --red:#c45050; --red-dim:#8b2e2e;
+  --border:rgba(201,168,76,0.25); --border-hi:rgba(201,168,76,0.5);
+  --line:rgba(201,168,76,0.1);
+  --shadow:rgba(0,0,0,0.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--ink);font-family:'Crimson Pro',Georgia,serif;color:var(--parch);font-size:15px}
+#app{display:flex;flex-direction:column;height:100%;overflow:hidden}
+
+.topbar{background:var(--ink-mid);border-bottom:1px solid var(--border-hi);padding:7px 12px;flex-shrink:0;display:flex;align-items:center;gap:8px}
+.topbar-title{font-family:'Cinzel',serif;font-size:.62rem;color:var(--gold);letter-spacing:.18em;flex:1;text-transform:uppercase}
+.role-badge{font-family:'Cinzel',serif;font-size:.45rem;padding:2px 7px;border-radius:2px;border:1px solid var(--gold-dim);color:var(--gold-dim);letter-spacing:.1em;text-transform:uppercase}
+.role-badge.gm{color:var(--teal);border-color:var(--teal-dim)}
+
+.tabbar{background:var(--ink);border-bottom:1px solid var(--border);display:flex;flex-shrink:0}
+.tab{flex:1;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.1em;color:var(--parch-faint);padding:9px 4px;cursor:pointer;border-bottom:2px solid transparent;text-align:center;transition:all .15s;text-transform:uppercase;background:none;border-top:none;border-left:none;border-right:none}
+.tab:hover{color:var(--parch-dim)}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);background:rgba(201,168,76,.04)}
+
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;background:var(--ink);padding:10px;scrollbar-width:thin;scrollbar-color:rgba(201,168,76,.2) var(--ink)}
+
+.card{background:var(--ink-mid);border:1px solid var(--border);border-radius:3px;box-shadow:0 3px 16px var(--shadow);margin-bottom:10px;overflow:hidden}
+.card-hdr{background:rgba(201,168,76,.07);padding:6px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.card-hdr-title{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.14em;color:var(--gold);text-transform:uppercase}
+.card-body{padding:10px}
+.card-footer{background:rgba(201,168,76,.04);padding:3px 10px;border-top:1px solid var(--border);text-align:center;font-family:'Cinzel',serif;font-size:.45rem;letter-spacing:.22em;color:var(--parch-faint);text-transform:uppercase}
+
+.f-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);font-family:'Crimson Pro',serif;font-size:.95rem;color:var(--parch);padding:1px 0 2px;outline:none;transition:border-color .2s}
+.f-input:focus{border-bottom-color:var(--gold)}
+.f-input::placeholder{color:var(--parch-faint);opacity:.6;font-style:italic}
+.title-input{font-family:'Cinzel',serif;font-size:1.05rem;letter-spacing:.05em;color:var(--gold-bright);border-bottom-color:var(--border-hi);margin-bottom:4px}
+
+.s-label{font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.14em;color:var(--gold);display:block;margin:8px 0 4px;text-transform:uppercase;opacity:.8}
+.s-label:first-child{margin-top:0}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border-hi),transparent);margin:8px 0}
+
+.tag-list{list-style:none}
+.tag-item{display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid var(--line)}
+.tag-item:last-child{border-bottom:none}
+.scratch-btn{width:15px;height:15px;flex-shrink:0;background:none;border:1px solid var(--border);border-radius:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--parch-faint);transition:all .12s;line-height:1;padding:0}
+.scratch-btn:hover{border-color:var(--border-hi);color:var(--parch-dim)}
+.scratch-btn.on{background:rgba(196,80,80,.2);border-color:var(--red);color:var(--red)}
+.tag-input{flex:1;background:transparent;border:none;font-family:'Crimson Pro',serif;font-size:.93rem;color:var(--parch);outline:none;padding:0}
+.tag-input.scratched{text-decoration:line-through;opacity:.3;color:var(--red)}
+.tag-input.weak{color:var(--red)}
+.tag-input::placeholder{color:var(--parch-faint);opacity:.5;font-style:italic}
+.tag-badge{font-family:'Cinzel',serif;font-size:.38rem;letter-spacing:.08em;text-transform:uppercase;padding:1px 5px;border-radius:2px;border:1px solid var(--border);color:var(--parch-faint);flex-shrink:0}
+.tag-badge.perm{border-color:var(--gold-dim);color:var(--gold-dim)}
+
+.circles-row{display:flex;align-items:center;gap:5px;margin:3px 0}
+.c-label{font-family:'Cinzel',serif;font-size:.48rem;letter-spacing:.1em;color:var(--parch-dim);min-width:56px;text-transform:uppercase}
+.circle{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--border-hi);background:transparent;cursor:pointer;transition:all .12s;flex-shrink:0}
+.circle.filled.milestone{background:var(--gold);border-color:var(--gold-bright)}
+.circle.filled.abandon{background:var(--red);border-color:var(--red-dim)}
+.circle.filled.improve{background:var(--teal);border-color:var(--teal-dim)}
+
+.quest-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);font-family:'Crimson Pro',serif;font-size:.93rem;font-style:italic;color:var(--parch);outline:none;padding:1px 0}
+.quest-input::placeholder{color:var(--parch-faint);opacity:.5}
+
+/* Hull status */
+.hull-row{display:flex;align-items:center;gap:6px;margin:4px 0}
+.hull-btn{width:28px;height:28px;border-radius:2px;border:1px solid var(--border-hi);background:transparent;color:var(--parch-dim);font-family:'Cinzel',serif;font-size:.7rem;cursor:pointer;transition:all .15s;flex-shrink:0}
+.hull-btn:hover{border-color:var(--gold);color:var(--gold)}
+.hull-btn.active{background:var(--red);border-color:var(--red-dim);color:var(--parch)}
+.hull-btn.active.h1,.hull-btn.active.h2{background:rgba(201,168,76,.2);border-color:var(--gold);color:var(--gold-bright)}
+.hull-status{font-family:'Crimson Pro',serif;font-style:italic;font-size:.82rem;color:var(--parch-dim);margin-left:4px}
+
+.toast{position:fixed;bottom:10px;right:10px;background:rgba(201,168,76,.15);border:1px solid var(--gold);color:var(--gold);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.12em;padding:5px 14px;border-radius:2px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:999;text-transform:uppercase}
+.toast.show{opacity:1}
+
+.readonly-note{font-family:'Crimson Pro',serif;font-style:italic;font-size:.82rem;color:var(--parch-faint);text-align:center;padding:6px 0 2px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <span class="topbar-title">⚔ Fellowship &amp; Ship</span>
+    <span class="role-badge" id="role-badge">Player</span>
+  </div>
+  <div class="tabbar">
+    <button class="tab active" id="tab-fellowship" onclick="showTab('fellowship')">Fellowship</button>
+    <button class="tab" id="tab-ship" onclick="showTab('ship')">The Ship</button>
+  </div>
+  <div class="scroll" id="scroll-area">
+    <div style="text-align:center;padding:40px 16px;color:var(--parch-faint);font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase">Initialising…</div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Saved</div>
+
+<script>
+var obrInstance = null;
+var isGM = false;
+var curTab = 'fellowship';
+var saveTimer = null;
+
+var META_KEY = 'com.litm.shared/v1';
+var LOCAL_KEY = 'litm-shared-v1';
+
+// ═══════════════════════════════════════════
+// DATA MODEL
+// ═══════════════════════════════════════════
+function emptyTag() { return {val:'', scratched:false}; }
+function emptyTags(n) { return Array.from({length:n}, emptyTag); }
+
+function defaultData() {
+  return {
+    fellowship: {
+      title: '',
+      powerTags: emptyTags(8),
+      weakTag: emptyTag(),
+      quest: '',
+      milestone: 0,
+      abandon: 0,
+      improve: 0,
+      specialImprovements: emptyTags(2)
+    },
+    ship: {
+      name: '',
+      type: '',
+      powerTags: emptyTags(4),
+      upgradeTags: emptyTags(3),
+      weakTag: emptyTag(),
+      quest: '',
+      milestone: 0,
+      abandon: 0,
+      hull: 0,
+      backpack: emptyTags(6)
+    }
+  };
+}
+
+function migrateTag(t) {
+  if (!t) return emptyTag();
+  if (typeof t === 'string') return {val:t, scratched:false};
+  return t;
+}
+
+function migrateData(d) {
+  if (!d) return defaultData();
+  var def = defaultData();
+
+  // Fellowship
+  if (!d.fellowship) d.fellowship = def.fellowship;
+  var f = d.fellowship;
+  if (!f.powerTags || f.powerTags.length < 8) f.powerTags = (f.powerTags||[]).concat(emptyTags(8)).slice(0,8);
+  f.powerTags = f.powerTags.map(migrateTag);
+  f.weakTag = migrateTag(f.weakTag);
+  if (!f.specialImprovements || f.specialImprovements.length < 2) f.specialImprovements = emptyTags(2);
+  f.specialImprovements = f.specialImprovements.map(migrateTag);
+  if (!f.title) f.title = '';
+  if (!f.quest) f.quest = '';
+  if (!f.milestone) f.milestone = 0;
+  if (!f.abandon) f.abandon = 0;
+  if (!f.improve) f.improve = 0;
+
+  // Ship
+  if (!d.ship) d.ship = def.ship;
+  var s = d.ship;
+  if (!s.powerTags || s.powerTags.length < 4) s.powerTags = (s.powerTags||[]).concat(emptyTags(4)).slice(0,4);
+  if (!s.upgradeTags || s.upgradeTags.length < 3) s.upgradeTags = (s.upgradeTags||[]).concat(emptyTags(3)).slice(0,3);
+  if (!s.backpack || s.backpack.length < 6) s.backpack = (s.backpack||[]).concat(emptyTags(6)).slice(0,6);
+  s.powerTags = s.powerTags.map(migrateTag);
+  s.upgradeTags = s.upgradeTags.map(migrateTag);
+  s.backpack = s.backpack.map(migrateTag);
+  s.weakTag = migrateTag(s.weakTag);
+  if (!s.name) s.name = '';
+  if (!s.type) s.type = '';
+  if (!s.quest) s.quest = '';
+  if (!s.milestone) s.milestone = 0;
+  if (!s.abandon) s.abandon = 0;
+  if (!s.hull) s.hull = 0;
+
+  return d;
+}
+
+var sharedData = defaultData();
+
+// ═══════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════
+function persist() {
+  if (!obrInstance) {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(sharedData)); } catch(e) {}
+    return Promise.resolve();
+  }
+  var payload = {};
+  payload[META_KEY] = JSON.stringify(sharedData);
+  return obrInstance.room.setMetadata(payload);
+}
+
+function loadFromMeta(meta) {
+  var raw = meta[META_KEY];
+  if (raw) {
+    try { sharedData = migrateData(JSON.parse(raw)); } catch(e) {}
+  }
+  render();
+}
+
+function showToast() {
+  var t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 1400);
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(function() {
+    readState();
+    persist().then(showToast).catch(function(e){ console.error('Save failed', e); });
+  }, 500);
+}
+window.scheduleSave = scheduleSave;
+
+// ═══════════════════════════════════════════
+// READ DOM → DATA
+// ═══════════════════════════════════════════
+function readVal(id) { var el=document.getElementById(id); return el?el.value:''; }
+function readTag(id) {
+  var el=document.getElementById(id);
+  if (!el) return emptyTag();
+  return {val:el.value, scratched:el.dataset.scratched==='1'};
+}
+function readTags(pfx, n) { return Array.from({length:n},function(_,i){ return readTag(pfx+'_'+i); }); }
+function readCircle(id) { var el=document.getElementById(id); return el?parseInt(el.dataset.count||'0'):0; }
+
+function readState() {
+  if (curTab === 'fellowship') {
+    var f = sharedData.fellowship;
+    f.title = readVal('fe-title');
+    f.quest = readVal('fe-quest');
+    f.milestone = readCircle('fe-milestone');
+    f.abandon = readCircle('fe-abandon');
+    f.improve = readCircle('fe-improve');
+    f.powerTags = readTags('fe-p', 8);
+    f.weakTag = readTag('fe-w-0');
+    f.specialImprovements = readTags('fe-si', 2);
+  } else {
+    var s = sharedData.ship;
+    s.name = readVal('sh-name');
+    s.type = readVal('sh-type');
+    s.quest = readVal('sh-quest');
+    s.milestone = readCircle('sh-milestone');
+    s.abandon = readCircle('sh-abandon');
+    s.powerTags = readTags('sh-p', 4);
+    s.upgradeTags = readTags('sh-u', 3);
+    s.weakTag = readTag('sh-w-0');
+    s.backpack = readTags('sh-bp', 6);
+    // hull is written directly on toggle, not via readState
+  }
+}
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+var esc = function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+
+function tagRow(id, ph, tag, cls) {
+  var sc = !!(tag && tag.scratched);
+  var inputClass = 'tag-input' + (cls?' '+cls:'') + (sc?' scratched':'');
+  return '<li class="tag-item">'
+    +'<button class="scratch-btn'+(sc?' on':'')+'" onclick="toggleScratch(\''+id+'\')">'+(sc?'&#x2715;':'/')+'</button>'
+    +'<input class="'+inputClass+'" id="'+id+'" type="text" placeholder="'+ph+'" value="'+esc(tag&&tag.val||'')+'" data-scratched="'+(sc?1:0)+'" oninput="scheduleSave()">'
+    +'</li>';
+}
+
+function tagRowBadged(id, ph, tag, badgeText, badgeCls) {
+  var sc = !!(tag && tag.scratched);
+  return '<li class="tag-item">'
+    +'<button class="scratch-btn'+(sc?' on':'')+'" onclick="toggleScratch(\''+id+'\')">'+(sc?'&#x2715;':'/')+'</button>'
+    +'<input class="tag-input'+(sc?' scratched':'')+'" id="'+id+'" type="text" placeholder="'+ph+'" value="'+esc(tag&&tag.val||'')+'" data-scratched="'+(sc?1:0)+'" oninput="scheduleSave()">'
+    +'<span class="tag-badge'+(badgeCls?' '+badgeCls:'')+'">'+(badgeText||'')+'</span>'
+    +'</li>';
+}
+
+function circleRow(id, label, count, max, cls) {
+  var h='<div class="circles-row" id="'+id+'" data-count="'+count+'"><span class="c-label">'+label+'</span>';
+  for (var i=0;i<max;i++) {
+    h+='<button class="circle '+cls+(i<count?' filled':'')+'" data-idx="'+i+'" onclick="toggleCircle(\''+id+'\','+i+','+max+',\''+cls+'\')" title="'+label+' '+(i+1)+'"></button>';
+  }
+  return h+'</div>';
+}
+
+function card(title, body, footer) {
+  return '<div class="card">'
+    +'<div class="card-hdr"><span class="card-hdr-title">'+title+'</span></div>'
+    +'<div class="card-body">'+body+'</div>'
+    +'<div class="card-footer">'+(footer||'Legend in the Mist')+'</div>'
+    +'</div>';
+}
+
+var HULL_LABELS = ['—','Stressed','Stressed','Distracted','Damaged','Failing','Lost'];
+var HULL_EFFECTS = [
+  '—',
+  'Cosmetic — no mechanical effect',
+  'Cosmetic — no mechanical effect',
+  'Scratch one power tag (Narrator chooses)',
+  'Scratch a second power tag',
+  'All power tags scratched',
+  'The ship is lost'
+];
+
+function hullHtml(hull) {
+  var h = '<div class="hull-row">';
+  for (var i=1;i<=6;i++) {
+    var active = hull === i;
+    var tierCls = (i<=2) ? 'h'+i : '';
+    h += '<button class="hull-btn'+(active?' active':'')+(active&&tierCls?' '+tierCls:'')+'" onclick="setHull('+i+')">'+i+'</button>';
+  }
+  h += '<span class="hull-status">'+(hull>0?HULL_LABELS[hull]+' — '+HULL_EFFECTS[hull]:'No damage')+'</span>';
+  h += '</div>';
+  return h;
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function showTab(name) {
+  if (curTab !== name) {
+    readState();
+  }
+  curTab = name;
+  document.getElementById('tab-fellowship').classList.toggle('active', name==='fellowship');
+  document.getElementById('tab-ship').classList.toggle('active', name==='ship');
+  render();
+}
+window.showTab = showTab;
+
+function render() {
+  if (curTab === 'fellowship') renderFellowship();
+  else renderShip();
+}
+
+function renderFellowship() {
+  var f = sharedData.fellowship;
+  var ro = !isGM;
+  var b = '';
+
+  b += '<input class="f-input title-input" id="fe-title" type="text" placeholder="Fellowship name…" value="'+esc(f.title||'')+'" oninput="scheduleSave()"'+(ro?' readonly':'')+' style="margin-bottom:6px">';
+
+  b += '<div class="divider"></div>';
+  b += '<span class="s-label">Power Tags (single-use)</span><ul class="tag-list">';
+  f.powerTags.forEach(function(tg,i){
+    b += tagRow('fe-p_'+i, 'power tag…', tg, '');
+  });
+  b += '</ul>';
+
+  b += '<div class="divider"></div>';
+  b += '<span class="s-label">Weakness</span><ul class="tag-list">';
+  b += tagRow('fe-w-0', 'weakness tag…', f.weakTag, 'weak');
+  b += '</ul>';
+
+  b += '<div class="divider"></div>';
+  b += '<span class="s-label">Quest</span>';
+  b += '<input class="quest-input" id="fe-quest" type="text" placeholder="The fellowship\'s shared purpose…" value="'+esc(f.quest||'')+'" oninput="scheduleSave()"'+(ro?' readonly':'')+' >';
+
+  b += '<div style="margin-top:8px">';
+  b += circleRow('fe-milestone','Milestone',f.milestone||0,3,'milestone');
+  b += circleRow('fe-abandon','Abandon',f.abandon||0,3,'abandon');
+  b += circleRow('fe-improve','Improve',f.improve||0,3,'improve');
+  b += '</div>';
+
+  b += '<div class="divider"></div>';
+  b += '<span class="s-label">Special Improvements</span><ul class="tag-list">';
+  f.specialImprovements.forEach(function(tg,i){
+    b += tagRow('fe-si_'+i, 'special improvement…', tg, '');
+  });
+  b += '</ul>';
+
+  if (ro) b += '<p class="readonly-note">Viewing only — ask your GM to make changes</p>';
+
+  document.getElementById('scroll-area').innerHTML = card('Fellowship Theme Card', b, 'Son of Oak');
+  attachScratchHandlers();
+}
+
+function renderShip() {
+  var s = sharedData.ship;
+  var ro = !isGM;
+  var b = '';
+
+  b += '<input class="f-input title-input" id="sh-name" type="text" placeholder="Ship name…" value="'+esc(s.name||'')+'" oninput="scheduleSave()"'+(ro?' readonly':'')+' style="margin-bottom:4px">';
+  b += '<input class="f-input" id="sh-type" type="text" placeholder="Type — courier, hauler, privateer…" value="'+esc(s.type||'')+'" oninput="scheduleSave()"'+(ro?' readonly':'')+' style="font-style:italic;margin-bottom:4px">';
+
+  b += '<div class="divider"></div>';
+  b += '<span class="s-label">Power Tags (single-use)</span><ul class="tag-list">';
+  s.powerTags.forEach(function(tg,i){
+    b += tagRow('sh-p_'+i, 'power tag…', tg, '');
+  });
+  b += '</ul>';
+
+  b += '<div class="divider"></div>';
+  b += '<span class="s-label">Upgrade Slots (permanent)</span><ul class="tag-list">';
+  s.upgradeTags.forEach(function(tg,i){
+    b += tagRowBadged('sh-u_'+i, 'permanent upgrade…', tg, 'Perm', 'perm');
+  });
+  b += '</ul>';
+
+  b += '<div class="divider"></div>';
+  b += '<span class="s-label">Weakness</span><ul class="tag-list">';
+  b += tagRow('sh-w-0', 'weakness tag…', s.weakTag, 'weak');
+  b += '</ul>';
+
+  b += '<div class="divider"></div>';
+  b += '<span class="s-label">Quest</span>';
+  b += '<input class="quest-input" id="sh-quest" type="text" placeholder="Why does this crew keep flying together…" value="'+esc(s.quest||'')+'" oninput="scheduleSave()"'+(ro?' readonly':'')+' >';
+  b += '<div style="margin-top:8px">';
+  b += circleRow('sh-milestone','Milestone',s.milestone||0,3,'milestone');
+  b += circleRow('sh-abandon','Abandon',s.abandon||0,3,'abandon');
+  b += '</div>';
+
+  b += '<div class="divider"></div>';
+  b += '<span class="s-label">Hull Status</span>';
+  b += hullHtml(s.hull||0);
+
+  b += '<div class="divider"></div>';
+  b += '<span class="s-label">Backpack — Story Tags</span><ul class="tag-list">';
+  s.backpack.forEach(function(tg,i){
+    b += tagRow('sh-bp_'+i, 'story tag…', tg, '');
+  });
+  b += '</ul>';
+
+  if (ro) b += '<p class="readonly-note">Viewing only — ask your GM to make changes</p>';
+
+  document.getElementById('scroll-area').innerHTML = card('The Ship', b, 'Son of Oak');
+  attachScratchHandlers();
+}
+
+// scratch buttons need re-attaching after innerHTML replacement
+function attachScratchHandlers() {}  // handled via onclick= in HTML
+
+// ═══════════════════════════════════════════
+// INTERACTIONS
+// ═══════════════════════════════════════════
+window.toggleScratch = function(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var now = el.dataset.scratched === '1';
+  el.dataset.scratched = now ? '0' : '1';
+  el.classList.toggle('scratched', !now);
+  var btn = el.previousElementSibling;
+  if (btn && btn.classList.contains('scratch-btn')) {
+    btn.classList.toggle('on', !now);
+    btn.innerHTML = now ? '/' : '&#x2715;';
+  }
+  scheduleSave();
+};
+
+window.toggleCircle = function(trackId, idx, max, cls) {
+  var wrap = document.getElementById(trackId);
+  if (!wrap) return;
+  var cur = parseInt(wrap.dataset.count||'0');
+  var next = idx < cur ? idx : idx + 1;
+  wrap.dataset.count = next;
+  var label = wrap.querySelector('.c-label') ? wrap.querySelector('.c-label').textContent : '';
+  var h = '<span class="c-label">'+label+'</span>';
+  for (var i=0;i<max;i++) {
+    h += '<button class="circle '+cls+(i<next?' filled':'')+'" data-idx="'+i+'" onclick="toggleCircle(\''+trackId+'\','+i+','+max+',\''+cls+'\')" title="'+label+' '+(i+1)+'"></button>';
+  }
+  wrap.innerHTML = h;
+  scheduleSave();
+};
+
+window.setHull = function(tier) {
+  readState();
+  sharedData.ship.hull = (sharedData.ship.hull === tier) ? 0 : tier;  // toggle off if same
+  persist().then(function(){
+    showToast();
+    renderShip();
+  });
+};
+
+// ═══════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════
+window.addEventListener('load', function() {
+  if (typeof window.OBR === 'undefined' || !window.OBR.isAvailable) {
+    // localStorage fallback
+    document.getElementById('role-badge').textContent = 'LOCAL';
+    document.getElementById('role-badge').classList.add('gm');
+    isGM = true;
+    try {
+      var raw = localStorage.getItem(LOCAL_KEY);
+      if (raw) sharedData = migrateData(JSON.parse(raw));
+    } catch(e) {}
+    render();
+    return;
+  }
+
+  window.OBR.onReady(function() {
+    obrInstance = window.OBR;
+    obrInstance.player.getRole().then(function(role) {
+      if (typeof role === 'string' && role.toUpperCase() === 'GM') {
+        isGM = true;
+        document.getElementById('role-badge').textContent = 'GM';
+        document.getElementById('role-badge').classList.add('gm');
+      }
+    }).catch(function(){});
+
+    obrInstance.room.getMetadata().then(function(meta) {
+      loadFromMeta(meta);
+    }).catch(function(){ render(); });
+
+    obrInstance.room.onMetadataChange(function(meta) {
+      readState(); // save current DOM state before overwriting
+      loadFromMeta(meta);
+    });
+  });
+});
+</script>
+</body>
+</html>
