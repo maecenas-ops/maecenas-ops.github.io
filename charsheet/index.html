@@ -121,6 +121,9 @@ html,body{height:100%;background:var(--ink);font-family:'Crimson Pro',Georgia,se
     <span class="topbar-title">LITM Sheets</span>
     <select class="char-select" id="charSelect" onchange="switchChar(this.value)"></select>
     <button class="icon-btn" onclick="openModal()" title="New character">&#xFF0B;</button>
+    <button class="icon-btn" onclick="exportChar()" title="Export character to file" style="width:auto;padding:0 8px;font-size:.5rem;letter-spacing:.1em;font-family:'Cinzel',serif;">Export</button>
+    <button class="icon-btn" onclick="document.getElementById('importInput').click()" title="Import character from file" style="width:auto;padding:0 8px;font-size:.5rem;letter-spacing:.1em;font-family:'Cinzel',serif;">Import</button>
+    <input type="file" id="importInput" accept=".json" style="display:none" onchange="importChar(event)">
     <button class="icon-btn danger" onclick="deleteChar()" title="Delete character" style="width:auto;padding:0 8px;font-size:.5rem;letter-spacing:.1em;font-family:'Cinzel',serif;">Delete</button>
   </div>
   <div class="tabbar" id="tabbar"></div>
@@ -140,25 +143,11 @@ html,body{height:100%;background:var(--ink);font-family:'Crimson Pro',Georgia,se
   </div>
 </div>
 
-<script type="module">
+<script src="sdk/obr-sdk.iife.js"></script>
+<script>
 // ═══════════════════════════════════════════════
-// OBR SDK — loaded dynamically; falls back to
-// localStorage if not running inside Owlbear
+// BOOT — uses bundled OBR SDK (window.OBR)
 // ═══════════════════════════════════════════════
-let OBR = null;
-
-// Only attempt OBR SDK load when running inside an iframe (i.e. inside Owlbear Rodeo).
-// When opened as a standalone HTML file, skip it entirely and go straight to localStorage.
-async function loadOBR() {
-  if (window.self === window.top) return; // not in an iframe, skip
-  try {
-    const mod = await import('https://esm.sh/@owlbear-rodeo/sdk@2.4.2');
-    OBR = mod.default;
-  } catch(e) {
-    OBR = null;
-  }
-}
-await loadOBR();
 
 // ═══════════════════════════════════════════════
 // CONSTANTS
@@ -227,7 +216,7 @@ function load() { return _chars; }
 async function saveChars(chars) {
   _chars = chars;
   if (isOBR) {
-    try { await OBR.player.setMetadata({[META_KEY]: chars}); } catch(e) {}
+    try { await window.OBR.player.setMetadata({[META_KEY]: chars}); } catch(e) {}
   } else {
     try { localStorage.setItem(LS_KEY, JSON.stringify(chars)); } catch(e) {}
   }
@@ -254,7 +243,7 @@ function showToast() {
 function subscribeParty() {
   if (!isOBR || !isGM || !OBR) return;
   if (unsubParty) unsubParty();
-  unsubParty = OBR.party.onChange(players => {
+  unsubParty = window.OBR.party.onChange(players => {
     partyData = {};
     for (const p of players) {
       const meta = p.metadata || {};
@@ -576,6 +565,47 @@ function handleHeroImage(event) {
 }
 window.handleHeroImage = handleHeroImage;
 
+function exportChar() {
+  if (!curChar) return;
+  const data = load();
+  const c = data[curChar] || newChar(curChar);
+  const json = JSON.stringify(c, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (curChar || 'character').replace(/[^a-z0-9]/gi, '-') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+window.exportChar = exportChar;
+
+function importChar(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const c = migrateChar(JSON.parse(e.target.result));
+      if (!c || !c.name) { alert('Invalid character file.'); return; }
+      const data = load();
+      // If name already exists, ask whether to overwrite
+      if (data[c.name] && !confirm('"' + c.name + '" already exists. Overwrite?')) return;
+      data[c.name] = c;
+      saveChars(data);
+      curChar = c.name;
+      curTab = 0;
+      renderAll();
+    } catch(err) {
+      alert('Could not read file — make sure it\'s a valid character export.');
+    }
+  };
+  reader.readAsText(file);
+  // Reset so the same file can be re-imported if needed
+  event.target.value = '';
+}
+window.importChar = importChar;
+
 function deleteChar() {
   if (!curChar) return;
   if (!confirm('Delete "'+curChar+'"?')) return;
@@ -602,19 +632,27 @@ document.getElementById('overlay').addEventListener('click',e=>{
 // BOOT
 // ═══════════════════════════════════════════════
 async function init() {
-  if (OBR) {
-    await new Promise(resolve=>OBR.onReady(resolve));
+  if (typeof window.OBR === 'undefined' || !window.OBR.isAvailable) {
+    isOBR=false; isGM=false; TABS=PLAYER_TABS;
+    try { _chars=JSON.parse(localStorage.getItem(LS_KEY)||'{}'); } catch(e) { _chars={}; }
+    const chars=Object.keys(_chars);
+    if (chars.length) curChar=chars[0];
+    renderAll();
+    return;
+  }
+
+  window.OBR.onReady(async function() {
     isOBR=true;
-    const role=await OBR.player.getRole();
+    const role=await window.OBR.player.getRole();
     isGM=(role==='GM');
     TABS=isGM?GM_TABS:PLAYER_TABS;
     try {
-      const meta=await OBR.player.getMetadata();
+      const meta=await window.OBR.player.getMetadata();
       _chars=(meta&&meta[META_KEY])?meta[META_KEY]:{};
     } catch(e) { _chars={}; }
     if (isGM) {
       try {
-        const players=await OBR.party.getPlayers();
+        const players=await window.OBR.party.getPlayers();
         partyData={};
         for (const p of players) {
           const meta=p.metadata||{};
@@ -623,13 +661,10 @@ async function init() {
       } catch(e) {}
       subscribeParty();
     }
-  } else {
-    isOBR=false; isGM=false; TABS=PLAYER_TABS;
-    try { _chars=JSON.parse(localStorage.getItem(LS_KEY)||'{}'); } catch(e) { _chars={}; }
-  }
-  const chars=Object.keys(_chars);
-  if (chars.length) curChar=chars[0];
-  renderAll();
+    const chars=Object.keys(_chars);
+    if (chars.length) curChar=chars[0];
+    renderAll();
+  });
 }
 
 init();
