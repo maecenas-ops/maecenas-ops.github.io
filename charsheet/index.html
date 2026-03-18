@@ -113,6 +113,21 @@ html,body{height:100%;background:var(--ink);font-family:'Crimson Pro',Georgia,se
 
 .empty{text-align:center;padding:40px 20px;color:var(--parch-faint);font-family:'Crimson Pro',serif;font-style:italic;font-size:1rem}
 .loading{text-align:center;padding:40px 20px;color:var(--parch-faint);font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase}
+
+.status-row{display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid var(--line)}
+.status-row:last-child{border-bottom:none}
+.status-name{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);font-family:'Crimson Pro',serif;font-size:.93rem;color:var(--parch);outline:none;padding:0 0 1px}
+.status-name::placeholder{color:var(--parch-faint);opacity:.5;font-style:italic}
+.status-boxes{display:flex;gap:2px;flex-shrink:0}
+.status-box{width:18px;height:18px;border-radius:2px;border:1px solid var(--border-hi);background:transparent;cursor:pointer;font-family:'Cinzel',serif;font-size:.5rem;color:var(--parch-faint);transition:all .12s;padding:0;flex-shrink:0}
+.status-box:hover{border-color:var(--gold);color:var(--gold)}
+.status-box.marked{background:var(--teal);border-color:var(--teal-dim);color:var(--ink-mid)}
+.status-box.marked.warn{background:var(--gold);border-color:var(--gold-dim);color:var(--ink)}
+.status-box.marked.danger{background:var(--red);border-color:var(--red-dim);color:var(--parch)}
+.status-del{background:none;border:none;color:var(--parch-faint);cursor:pointer;font-size:.85rem;padding:0 2px;line-height:1;transition:color .12s;flex-shrink:0}
+.status-del:hover{color:var(--red)}
+.status-add{background:rgba(201,168,76,.07);border:1px dashed var(--border);color:var(--parch-faint);font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.1em;text-transform:uppercase;padding:5px;width:100%;border-radius:2px;cursor:pointer;margin-top:6px;transition:all .15s}
+.status-add:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.1)}
 </style>
 </head>
 <body>
@@ -172,7 +187,7 @@ function newChar(name) {
   return {name,playerName:'',heroImage:'',bio:'',promise:0,quintessences:'',
     fellowRelations:[{companion:'',tag:''},{companion:'',tag:''},{companion:'',tag:''}],
     themes:[newTheme(),newTheme(),newTheme(),newTheme()],
-    backpack:emptyTags(8),notes:''};
+    backpack:emptyTags(8),notes:'',statuses:[]};
 }
 
 function fixTag(tg) {
@@ -199,6 +214,7 @@ function migrateChar(c) {
   if (!c.fellowRelations) c.fellowRelations = [{companion:'',tag:''},{companion:'',tag:''},{companion:'',tag:''}];
   if (!c.heroImage) c.heroImage = '';
   if (!c.bio) c.bio = '';
+  if (!c.statuses) c.statuses = [];
   return c;
 }
 
@@ -213,14 +229,14 @@ let unsubParty = null;
 
 function load() { return _chars; }
 
-async function saveChars(chars) {
+function saveChars(chars) {
   _chars = chars;
   if (isOBR) {
-    try { await window.OBR.player.setMetadata({[META_KEY]: chars}); } catch(e) {}
+    window.OBR.player.setMetadata({[META_KEY]: chars}).then(showToast).catch(function(){showToast();});
   } else {
     try { localStorage.setItem(LS_KEY, JSON.stringify(chars)); } catch(e) {}
+    showToast();
   }
-  showToast();
 }
 
 let saveTimer = null;
@@ -241,7 +257,7 @@ function showToast() {
 }
 
 function subscribeParty() {
-  if (!isOBR || !isGM || !OBR) return;
+  if (!isOBR || !isGM || !window.OBR) return;
   if (unsubParty) unsubParty();
   unsubParty = window.OBR.party.onChange(players => {
     partyData = {};
@@ -306,6 +322,7 @@ function readState() {
     c.bio=readVal('heroBio');
     c.promise=readCircle('promiseTrack'); c.quintessences=readVal('quintessences');
     c.fellowRelations=[0,1,2].map(i=>({companion:readVal('fr_c_'+i),tag:readVal('fr_t_'+i)}));
+    // statuses are written directly on interaction, not via DOM read
   } else if (curTab>=1 && curTab<=4) {
     const t=c.themes[curTab-1];
     t.type=readVal('th_type'); t.quest=readVal('th_quest');
@@ -375,6 +392,21 @@ function heroHtml(c) {
   b+='<div class="divider"></div>'+circleRow('promiseTrack','Promise',c.promise||0,5,'promise')
     +'<div class="divider"></div><span class="s-label">Quintessences</span>'
     +'<input class="f-input" id="quintessences" type="text" placeholder="&#x2026;" value="'+esc(c.quintessences||'')+'" oninput="scheduleSave()">';
+
+  // Statuses
+  b += '<div class="divider"></div><span class="s-label">Statuses</span>';
+  const statuses = c.statuses || [];
+  if (statuses.length) {
+    b += '<div id="status-list">';
+    statuses.forEach((st, si) => {
+      b += statusRowHtml(st, si);
+    });
+    b += '</div>';
+  } else {
+    b += '<div id="status-list"></div>';
+  }
+  b += '<button class="status-add" onclick="addStatus()">+ Add Status</button>';
+
   return card('Hero Card','&#x2694;',b);
 }
 
@@ -565,7 +597,71 @@ function handleHeroImage(event) {
 }
 window.handleHeroImage = handleHeroImage;
 
-function exportChar() {
+function statusRowHtml(st, si) {
+  let boxes = '';
+  for (let t = 1; t <= 6; t++) {
+    const marked = !!(st.boxes && st.boxes[t]);
+    const cls = marked ? (t === 6 ? ' danger' : t === 5 ? ' warn' : '') : '';
+    boxes += '<button class="status-box'+(marked?' marked'+cls:'')+'" onclick="toggleStatusBox('+si+','+t+')" title="Tier '+t+'">'+t+'</button>';
+  }
+  return '<div class="status-row" id="status-row-'+si+'">'
+    +'<input class="status-name" type="text" placeholder="status name…" value="'+esc(st.name||'')+'" oninput="updateStatusName('+si+', this.value)">'
+    +boxes
+    +'<button class="status-del" onclick="removeStatus('+si+')" title="Remove">&#x2715;</button>'
+    +'</div>';
+}
+
+window.addStatus = function() {
+  const data = load();
+  const c = data[curChar] || newChar(curChar);
+  c.statuses = c.statuses || [];
+  c.statuses.push({name:'', boxes:{}});
+  data[curChar] = c;
+  saveChars(data);
+  // append row without full re-render
+  const list = document.getElementById('status-list');
+  if (list) {
+    list.insertAdjacentHTML('beforeend', statusRowHtml({name:'',boxes:{}}, c.statuses.length-1));
+  }
+};
+
+window.updateStatusName = function(si, val) {
+  const data = load();
+  const c = data[curChar];
+  if (!c || !c.statuses || !c.statuses[si]) return;
+  c.statuses[si].name = val;
+  data[curChar] = c;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveChars(data), 500);
+};
+
+window.toggleStatusBox = function(si, tier) {
+  const data = load();
+  const c = data[curChar];
+  if (!c || !c.statuses || !c.statuses[si]) return;
+  const st = c.statuses[si];
+  st.boxes = st.boxes || {};
+  st.boxes[tier] = !st.boxes[tier];
+  data[curChar] = c;
+  saveChars(data);
+  // update just this row
+  const row = document.getElementById('status-row-'+si);
+  if (row) row.outerHTML = statusRowHtml(st, si);
+};
+
+window.removeStatus = function(si) {
+  const data = load();
+  const c = data[curChar];
+  if (!c || !c.statuses) return;
+  c.statuses.splice(si, 1);
+  data[curChar] = c;
+  saveChars(data);
+  // re-render the whole status list to fix indices
+  const list = document.getElementById('status-list');
+  if (list) {
+    list.innerHTML = c.statuses.map((st, i) => statusRowHtml(st, i)).join('');
+  }
+};
   if (!curChar) return;
   const data = load();
   const c = data[curChar] || newChar(curChar);
@@ -631,7 +727,7 @@ document.getElementById('overlay').addEventListener('click',e=>{
 // ═══════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════
-async function init() {
+function init() {
   if (typeof window.OBR === 'undefined' || !window.OBR.isAvailable) {
     isOBR=false; isGM=false; TABS=PLAYER_TABS;
     try { _chars=JSON.parse(localStorage.getItem(LS_KEY)||'{}'); } catch(e) { _chars={}; }
@@ -641,29 +737,33 @@ async function init() {
     return;
   }
 
-  window.OBR.onReady(async function() {
+  window.OBR.onReady(function() {
     isOBR=true;
-    const role=await window.OBR.player.getRole();
-    isGM=(role==='GM');
-    TABS=isGM?GM_TABS:PLAYER_TABS;
-    try {
-      const meta=await window.OBR.player.getMetadata();
+    window.OBR.player.getRole().then(function(role) {
+      isGM=(role==='GM');
+      TABS=isGM?GM_TABS:PLAYER_TABS;
+      return window.OBR.player.getMetadata();
+    }).then(function(meta) {
       _chars=(meta&&meta[META_KEY])?meta[META_KEY]:{};
-    } catch(e) { _chars={}; }
-    if (isGM) {
-      try {
-        const players=await window.OBR.party.getPlayers();
-        partyData={};
-        for (const p of players) {
-          const meta=p.metadata||{};
-          partyData[p.id]={playerName:p.name,chars:meta[META_KEY]||{}};
-        }
-      } catch(e) {}
-      subscribeParty();
-    }
-    const chars=Object.keys(_chars);
-    if (chars.length) curChar=chars[0];
-    renderAll();
+      if (isGM) {
+        window.OBR.party.getPlayers().then(function(players) {
+          partyData={};
+          for (const p of players) {
+            const meta=p.metadata||{};
+            partyData[p.id]={playerName:p.name,chars:meta[META_KEY]||{}};
+          }
+          subscribeParty();
+        }).catch(function(){});
+      }
+      const chars=Object.keys(_chars);
+      if (chars.length) curChar=chars[0];
+      renderAll();
+    }).catch(function(e) {
+      console.warn('LITM Sheets: init error', e);
+      const chars=Object.keys(_chars);
+      if (chars.length) curChar=chars[0];
+      renderAll();
+    });
   });
 }
 
